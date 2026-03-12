@@ -156,6 +156,7 @@ jobs:
               curl -L https://github.com/reigadegr/openfang_action/raw/main/patchs/$i -o $i
               patch -p1 -F 3 < $i
           done
+          cargo add mimalloc --features no_thp,override -p openfang-cli
 
       - name: "⚙️ Reset flags"
         shell: bash
