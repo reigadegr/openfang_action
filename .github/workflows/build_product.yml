@@ -187,7 +187,7 @@ jobs:
               sed -i '/--no-rosegment/d' "$script_file"
           fi
           
-          for i in "openfang-cli"; do
+          for i in "openfang"; do
               bin_name="$i"
               sh "$script_file" "${{ matrix.target }}" "$bin_name" || true
     
