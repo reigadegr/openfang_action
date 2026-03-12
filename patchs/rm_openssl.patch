@@ -1,0 +1,79 @@
+commit b7cc1432f2dec7adeb2a2983d974198eaebb05ef
+Author: reigadegr <2722688642@qq.com>
+Date:   Thu Mar 12 14:24:04 2026 +0800
+
+    rm openssl
+
+diff --git a/Cargo.toml b/Cargo.toml
+index a6d845e..9bd6943 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -134,8 +134,9 @@ zip = { version = "2", default-features = false, features = ["deflate"] }
+ 
+ # Email (SMTP + IMAP)
+ lettre = { version = "0.11", default-features = false, features = ["builder", "hostname", "smtp-transport", "tokio1", "tokio1-rustls-tls"] }
+-imap = "2"
+-native-tls = "0.2"
++imap = { version = "2", default-features = false }
++rustls = { version = "0.23", default-features = false, features = ["std", "ring", "tls12"] }
++webpki-roots = "1"
+ mailparse = "0.15"
+ 
+ # Testing
+diff --git a/crates/openfang-channels/Cargo.toml b/crates/openfang-channels/Cargo.toml
+index 49e5725..cc7bba2 100644
+--- a/crates/openfang-channels/Cargo.toml
++++ b/crates/openfang-channels/Cargo.toml
+@@ -30,7 +30,8 @@ html-escape = { workspace = true }
+ 
+ lettre = { workspace = true }
+ imap = { workspace = true }
+-native-tls = { workspace = true }
++rustls = { workspace = true }
++webpki-roots = { workspace = true }
+ mailparse = { workspace = true }
+ 
+ [dev-dependencies]
+diff --git a/crates/openfang-channels/src/email.rs b/crates/openfang-channels/src/email.rs
+index 009ba0d..4893696 100644
+--- a/crates/openfang-channels/src/email.rs
++++ b/crates/openfang-channels/src/email.rs
+@@ -13,6 +13,7 @@ use lettre::transport::smtp::authentication::Credentials;
+ use lettre::AsyncSmtpTransport;
+ use lettre::AsyncTransport;
+ use lettre::Tokio1Executor;
++use std::net::TcpStream;
+ use std::pin::Pin;
+ use std::sync::Arc;
+ use std::time::Duration;
+@@ -211,12 +212,24 @@ fn fetch_unseen_emails(
+     password: &str,
+     folders: &[String],
+ ) -> Result<Vec<(String, String, String, String)>, String> {
+-    let tls = native_tls::TlsConnector::builder()
+-        .build()
+-        .map_err(|e| format!("TLS connector error: {e}"))?;
+-
+-    let client = imap::connect((host, port), host, &tls)
+-        .map_err(|e| format!("IMAP connect failed: {e}"))?;
++    let tcp = TcpStream::connect((host, port)).map_err(|e| format!("IMAP TCP connect failed: {e}"))?;
++
++    let root_store =
++        rustls::RootCertStore::from_iter(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
++    let tls_config = rustls::ClientConfig::builder()
++        .with_root_certificates(root_store)
++        .with_no_client_auth();
++    let server_name = rustls::pki_types::ServerName::try_from(host)
++        .map_err(|_| format!("Invalid IMAP server name: {host}"))?
++        .to_owned();
++    let tls_conn = rustls::ClientConnection::new(Arc::new(tls_config), server_name)
++        .map_err(|e| format!("TLS config error: {e}"))?;
++    let tls_stream = rustls::StreamOwned::new(tls_conn, tcp);
++
++    let mut client = imap::Client::new(tls_stream);
++    client
++        .read_greeting()
++        .map_err(|e| format!("IMAP greeting failed: {e}"))?;
+ 
+     // Try LOGIN first; fall back to AUTHENTICATE PLAIN for servers like Lark
+     // that reject LOGIN and only support AUTH=PLAIN (SASL).
