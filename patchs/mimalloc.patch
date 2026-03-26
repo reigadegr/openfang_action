@@ -1,8 +1,8 @@
 diff --git a/crates/openfang-cli/src/main.rs b/crates/openfang-cli/src/main.rs
-index beade43..2d615c6 100644
+index 8219f91..afbdb6b 100644
 --- a/crates/openfang-cli/src/main.rs
 +++ b/crates/openfang-cli/src/main.rs
-@@ -6634,3 +6634,6 @@ args = ["-y", "@modelcontextprotocol/server-github"]
+@@ -6853,3 +6853,6 @@ args = ["-y", "@modelcontextprotocol/server-github"]
          assert!(!is_openfang_path_line("alias of=openfang", dir));
      }
  }
