@@ -1,16 +1,7 @@
 diff --git a/Cargo.toml b/Cargo.toml
-index 8527385..36d00d3 100644
+index cc9672a..8f84440 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -32,7 +32,7 @@ tokio-stream = "0.1"
- # Serialization
- serde = { version = "1", features = ["derive"] }
- serde_json = "1"
--toml = "0.8"
-+toml = "1.1"
- rmp-serde = "1"
- 
- # Error handling
 @@ -62,7 +62,7 @@ clap = { version = "4", features = ["derive"] }
  clap_complete = "4"
  
@@ -20,7 +11,7 @@ index 8527385..36d00d3 100644
  
  # Async trait
  async-trait = "0.1"
-@@ -95,7 +95,7 @@ dirs = "6"
+@@ -96,7 +96,7 @@ dirs = "6"
  serde_yaml = "0.9"
  
  # JSON5 parsing
@@ -29,40 +20,20 @@ index 8527385..36d00d3 100644
  
  # Directory walking
  walkdir = "2"
-@@ -113,10 +113,10 @@ rand = "0.8"
- zeroize = { version = "1", features = ["derive"] }
+@@ -141,16 +141,15 @@ zip = { version = "4", default-features = false, features = ["deflate"] }
  
- # Rate limiting
--governor = "0.8"
-+governor = "0.10"
- 
- # Interactive CLI
--ratatui = "0.29"
-+ratatui = "0.30"
- colored = "3"
- 
- # Encryption
-@@ -130,20 +130,19 @@ html-escape = "0.2"
- regex-lite = "0.1"
- 
- # Socket options (SO_REUSEADDR)
--socket2 = "0.5"
-+socket2 = "0.6"
- 
- # Zip archive extraction
--zip = { version = "4", default-features = false, features = ["deflate"] }
-+zip = { version = "8", default-features = false, features = ["deflate"] }
- 
--# Email (SMTP + IMAP)
-+# Email (SMTP + IMAP over rustls)
+ # Email (SMTP + IMAP)
  lettre = { version = "0.11", default-features = false, features = ["builder", "hostname", "smtp-transport", "tokio1", "tokio1-rustls-tls"] }
 -imap = "2"
--native-tls = "0.2"
+-native-tls = { version = "0.2", features = ["vendored"] }
 +imap = { version = "2", default-features = false }
 +rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
 +rustls-native-certs = "0.8"
 +webpki-roots = "1"
  mailparse = "0.16"
+ 
+ # MQTT client
+ rumqttc = "0.24"
  
 -# OpenSSL (vendored = statically compiled, no runtime libssl dependency on Linux)
 -openssl = { version = "0.10", features = ["vendored"] }
@@ -70,28 +41,11 @@ index 8527385..36d00d3 100644
  # Testing
  tokio-test = "0.4"
  tempfile = "3"
-diff --git a/crates/openfang-api/src/routes.rs b/crates/openfang-api/src/routes.rs
-index 5a383d8..fcdd6b4 100644
---- a/crates/openfang-api/src/routes.rs
-+++ b/crates/openfang-api/src/routes.rs
-@@ -363,7 +363,11 @@ pub async fn send_message(
-     // (not as a separate session message which the LLM may not process).
-     let content_blocks = if !req.attachments.is_empty() {
-         let image_blocks = resolve_attachments(&req.attachments);
--        if image_blocks.is_empty() { None } else { Some(image_blocks) }
-+        if image_blocks.is_empty() {
-+            None
-+        } else {
-+            Some(image_blocks)
-+        }
-     } else {
-         None
-     };
 diff --git a/crates/openfang-channels/Cargo.toml b/crates/openfang-channels/Cargo.toml
-index b67b91c..775e8a4 100644
+index e0ef71d..d2ad215 100644
 --- a/crates/openfang-channels/Cargo.toml
 +++ b/crates/openfang-channels/Cargo.toml
-@@ -35,7 +35,9 @@ roxmltree = "0.21"
+@@ -36,7 +36,9 @@ roxmltree = "0.21"
  
  lettre = { workspace = true }
  imap = { workspace = true }
@@ -100,8 +54,8 @@ index b67b91c..775e8a4 100644
 +rustls-native-certs = { workspace = true }
 +webpki-roots = { workspace = true }
  mailparse = { workspace = true }
+ rumqttc = { workspace = true }
  
- [dev-dependencies]
 diff --git a/crates/openfang-channels/src/email.rs b/crates/openfang-channels/src/email.rs
 index d76b414..00689b3 100644
 --- a/crates/openfang-channels/src/email.rs
@@ -178,16 +132,3 @@ index d76b414..00689b3 100644
  
      // Try LOGIN first; fall back to AUTHENTICATE PLAIN for servers like Lark
      // that reject LOGIN and only support AUTH=PLAIN (SASL).
-diff --git a/crates/openfang-kernel/Cargo.toml b/crates/openfang-kernel/Cargo.toml
-index c9176ef..f3b59b8 100644
---- a/crates/openfang-kernel/Cargo.toml
-+++ b/crates/openfang-kernel/Cargo.toml
-@@ -33,7 +33,7 @@ subtle = { workspace = true }
- rand = { workspace = true }
- hex = { workspace = true }
- reqwest = { workspace = true }
--cron = "0.15"
-+cron = "0.16"
- zeroize = { workspace = true }
- 
- [target.'cfg(unix)'.dependencies]
